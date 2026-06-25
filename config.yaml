@@ -1,0 +1,29 @@
+data:
+  source: "akshare"
+  symbol: "sh000300"
+  csv_path: "data/raw/raw_data.csv"
+  start_date: "2010-01-01"
+  end_date: "2024-12-31"
+
+strategy:
+  short_window: 20
+  long_window: 60
+
+backtest:
+  initial_cash: 1000000
+  commission: 0.0003
+  slippage: 0.0002
+  periods_per_year: 252
+
+optimization:
+  short_windows: [5, 10, 20, 30, 60]
+  long_windows: [30, 60, 120, 180, 250]
+  train_start: "2010-01-01"
+  train_end: "2018-12-31"
+  test_start: "2019-01-01"
+  test_end: "2024-12-31"
+
+output:
+  figure_dir: "results/figures"
+  table_dir: "results/tables"
+  report_dir: "results/reports"
