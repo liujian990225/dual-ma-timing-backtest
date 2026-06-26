@@ -49,8 +49,8 @@ def plot_trade_signals(df: pd.DataFrame, save_path: str | Path) -> None:
     if "ma_long" in df.columns:
         plt.plot(df.index, df["ma_long"], label="MA Long")
 
-    plt.scatter(buy_signal.index, buy_signal["close"], label="Buy")
-    plt.scatter(sell_signal.index, sell_signal["close"], label="Sell")
+    plt.scatter(buy_signal.index, buy_signal["close"], marker="^", label="Buy")
+    plt.scatter(sell_signal.index, sell_signal["close"], marker="v", label="Sell")
 
     plt.title("Price, Moving Averages and Trade Signals")
     plt.xlabel("Date")
@@ -82,6 +82,13 @@ def plot_parameter_heatmap(
     plt.xlabel("Long Window")
     plt.ylabel("Short Window")
     plt.title(f"Parameter Heatmap: {value_col}")
+
+    for i, short in enumerate(pivot.index):
+        for j, long in enumerate(pivot.columns):
+            value = pivot.loc[short, long]
+            if pd.notna(value):
+                plt.text(j, i, f"{value:.2f}", ha="center", va="center")
+
     plt.tight_layout()
     plt.savefig(save_path, dpi=150)
     plt.close()

@@ -11,7 +11,11 @@ def load_price_data(
     start_date: str | None = None,
     end_date: str | None = None,
 ) -> pd.DataFrame:
-    """Load OHLCV price data from AkShare or a local CSV file."""
+    """Load OHLCV price data from AkShare or a local CSV file.
+
+    Expected output columns:
+    date, open, high, low, close, volume
+    """
     if source == "akshare":
         return _load_from_akshare(symbol, start_date, end_date)
 
