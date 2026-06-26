@@ -6,6 +6,3 @@ venv/
 .ipynb_checkpoints/
 data/raw/*.csv
 data/processed/*.csv
-results/figures/*.png
-results/tables/*.csv
-results/reports/*.md
