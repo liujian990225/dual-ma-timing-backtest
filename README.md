@@ -6,7 +6,7 @@
 
 双均线择时策略是一类经典趋势跟踪策略。当短期均线高于长期均线时，认为市场处于上升趋势并持仓；当短期均线低于长期均线时，认为市场趋势转弱并空仓。
 
-本项目重点不是追求历史收益最大化，而是构建一个结构清晰、可复现、可解释的量化回测流程。
+本项目重点不是追求历史收益最大化，而是构建一个结构清晰、可复现、可解释的量化回测流程。项目不仅实现了基础双均线策略，还加入了交易成本、参数优化、样本内/样本外验证和结果可视化，用于展示完整的量化策略研究流程。
 
 ## 2. Strategy Logic
 
@@ -23,6 +23,8 @@
 ```python
 df["position"] = df["signal"].shift(1)
 ```
+
+该处理保证策略不会使用当天收盘后才产生的信号去赚取当天收益，从而避免 look-ahead bias。
 
 ## 3. Features
 
@@ -46,7 +48,6 @@ dual-ma-timing-backtest/
 ├── config.yaml
 ├── main.py
 ├── src/
-│   ├── __init__.py
 │   ├── data_loader.py
 │   ├── data_processor.py
 │   ├── strategy.py
@@ -71,6 +72,7 @@ dual-ma-timing-backtest/
 
 ```bash
 pip install -r requirements.txt
+pip install -r requirements-extra.txt
 ```
 
 ### 5.2 Run backtest
@@ -88,6 +90,7 @@ results/figures/trade_signals.png
 results/figures/parameter_heatmap.png
 results/tables/performance_summary.csv
 results/tables/optimization_results.csv
+results/tables/out_of_sample_summary.csv
 results/reports/backtest_report.md
 ```
 
@@ -156,7 +159,7 @@ optimization:
 short_window < long_window
 ```
 
-排序指标默认使用夏普比率，也可以根据收益回撤比或年化收益率筛选。
+排序指标默认使用夏普比率。参数优化结果并不代表未来一定有效，因此项目进一步加入样本内/样本外验证，用于观察参数稳定性和过拟合风险。
 
 ## 10. In-sample and Out-of-sample Test
 
@@ -176,35 +179,94 @@ short_window < long_window
 3. 将该参数应用于测试区间
 4. 比较样本内和样本外表现
 
-## 11. Key Findings Template
+## 11. Backtest Results
 
-你可以在真实运行后补充如下结论：
+### 11.1 Overall Performance
+
+默认双均线参数为 `short_window = 20`、`long_window = 60`。整体回测结果如下：
+
+| Metric | Strategy | Benchmark |
+|---|---:|---:|
+| Total Return | 5.70% | 11.31% |
+| Annual Return | 0.39% | 0.76% |
+| Annual Volatility | 14.94% | 22.03% |
+| Sharpe Ratio | 0.026 | 0.034 |
+| Max Drawdown | -42.70% | -46.70% |
+| Trade Count | 74 | - |
+| Holding Ratio | 49.02% | 100.00% |
+| Excess Total Return | -5.61% | - |
+
+从整体结果看，默认双均线策略的累计收益和年化收益均低于买入持有基准，但策略的年化波动率和最大回撤也低于基准。这说明双均线择时在该区间内没有明显提升收益，但在降低市场暴露和控制回撤方面有一定作用。
+
+### 11.2 Out-of-sample Performance
+
+样本外测试结果如下：
+
+| Metric | Strategy | Benchmark |
+|---|---:|---:|
+| Total Return | -9.01% | 32.51% |
+| Annual Return | -1.85% | 5.71% |
+| Annual Volatility | 13.57% | 19.28% |
+| Sharpe Ratio | -0.136 | 0.296 |
+| Max Drawdown | -34.51% | -45.60% |
+| Trade Count | 27 | - |
+| Holding Ratio | 44.32% | 100.00% |
+| Excess Total Return | -41.52% | - |
+
+样本外结果显示，策略收益明显弱于买入持有基准，说明样本内表现较好的均线参数在未来区间并没有稳定延续。与此同时，策略最大回撤低于基准，说明其仍然具备一定风险控制能力。整体来看，双均线策略在趋势不连续或市场快速反转阶段容易出现信号滞后和收益损失。
+
+### 11.3 Parameter Optimization Results
+
+参数优化结果中，样本内表现最好的组合为：
 
 ```text
-双均线策略在趋势性较强的市场环境中表现较好，能够在下跌趋势中降低风险暴露；
-但在震荡市场中容易出现频繁交易和假突破信号。
-样本外表现通常弱于样本内结果，说明均线参数存在一定过拟合风险。
+short_window = 5
+long_window = 60
 ```
 
-## 12. Limitations
+该组合的表现如下：
+
+| Metric | Value |
+|---|---:|
+| Total Return | 79.29% |
+| Annual Return | 4.19% |
+| Annual Volatility | 15.00% |
+| Sharpe Ratio | 0.279 |
+| Max Drawdown | -33.02% |
+| Trade Count | 105 |
+| Holding Ratio | 49.80% |
+
+从参数优化结果看，较短的短期均线能够更快捕捉趋势变化，因此在样本内取得了更高收益。但该组合交易次数较多，也意味着策略对市场噪声更敏感。结合样本外结果可以看出，参数优化存在一定过拟合风险，不能仅根据历史最优参数判断策略未来表现。
+
+## 12. Key Findings
+
+1. 默认双均线策略没有显著跑赢买入持有基准，但最大回撤和波动率相对更低。
+2. 参数优化可以显著改善样本内表现，其中 `5/60` 组合在历史区间内表现较好。
+3. 样本外测试中策略收益明显下降，说明双均线参数存在敏感性和过拟合风险。
+4. 双均线策略更适合作为趋势过滤和风险控制工具，而不是单独作为稳定收益增强策略。
+5. 策略在趋势行情中更容易发挥作用，在震荡行情中容易产生频繁交易和假信号。
+
+## 13. Limitations
 
 - 双均线策略存在信号滞后
 - 震荡行情中容易反复交易
 - 参数选择对结果影响较大
 - 简化交易成本假设可能低估真实摩擦
 - 未考虑流动性冲击和涨跌停约束
+- 当前项目只测试单一指数，尚未验证多资产适用性
 
-## 13. Future Improvements
+## 14. Future Improvements
 
 - 加入波动率过滤器
 - 加入成交量过滤器
+- 增加趋势强度过滤条件，例如 `close > MA250`
 - 增加多资产组合回测
 - 增加滚动窗口 Walk-forward 优化
 - 使用 Plotly 或 Streamlit 构建交互式展示
 - 与 Backtrader 或 VectorBT 框架结果对照验证
 
-## 14. Resume Description
+## 15. Resume Description
 
 ```text
-基于 Python 构建指数双均线择时策略回测系统，完成行情数据清洗、交易信号生成、交易成本模拟、净值计算、绩效评估和参数优化；通过信号滞后处理避免未来函数，并采用样本内参数寻优与样本外验证评估策略稳定性；输出净值曲线、回撤曲线、买卖点图和参数热力图，并将项目模块化封装至 GitHub。
+基于 Python 构建指数双均线择时策略回测系统，完成行情数据获取、数据清洗、交易信号生成、交易成本模拟、净值计算、绩效评估、参数优化和样本外验证；通过信号滞后处理避免未来函数，并输出净值曲线、回撤曲线、买卖点图和参数热力图。研究发现双均线策略可在一定程度上降低最大回撤，但收益表现依赖市场趋势环境，存在参数敏感和样本外衰减问题。
 ```
